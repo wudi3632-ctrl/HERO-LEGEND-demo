@@ -1,0 +1,129 @@
+[gd_scene format=3 uid="uid://dpdymyacmq4tn"]
+
+[ext_resource type="Script" uid="uid://bs2qasgo7ohro" path="res://scripts/ui/pause_menu.gd" id="1_pause"]
+[ext_resource type="FontFile" uid="uid://b1mq84f8n0f4y" path="res://assets/fonts/PressStart2P-Regular.ttf" id="2_pixel_font"]
+[ext_resource type="Theme" uid="uid://pixeltheme" path="res://assets/themes/pixel_theme.tres" id="3_pixel_theme"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("2_pixel_font")
+font_size = 56
+outline_size = 5
+outline_color = Color(0.1, 0.1, 0.2, 1)
+shadow_color = Color(0, 0, 0, 0.5)
+
+[sub_resource type="LabelSettings" id="LabelSettings_item"]
+font = ExtResource("2_pixel_font")
+outline_size = 2
+outline_color = Color(0.1, 0.1, 0.2, 1)
+
+[node name="PauseMenu" type="Control" unique_id=1411247297]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_pause")
+
+[node name="BlurBackground" type="ColorRect" parent="." unique_id=1547425962]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.05, 0.15, 0.75)
+
+[node name="Panel" type="Panel" parent="." unique_id=1173242189]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -280.0
+offset_right = 320.0
+offset_bottom = 281.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("3_pixel_theme")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel" unique_id=2126160286]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 40.0
+offset_bottom = -79.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 25
+
+[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer" unique_id=1705937603]
+layout_mode = 2
+text = "PAUSED"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer" unique_id=1484227042]
+layout_mode = 2
+
+[node name="BGMContainer" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=1758961621]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 25
+
+[node name="BGMLabel" type="Label" parent="Panel/VBoxContainer/BGMContainer" unique_id=1481384587]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+text = "BGM"
+label_settings = SubResource("LabelSettings_item")
+
+[node name="BGMSlider" type="HSlider" parent="Panel/VBoxContainer/BGMContainer" unique_id=566140138]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+value = 70.0
+
+[node name="BGMValue" type="Label" parent="Panel/VBoxContainer/BGMContainer" unique_id=300967050]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "70%"
+label_settings = SubResource("LabelSettings_item")
+
+[node name="SFXContainer" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=2072857682]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 25
+
+[node name="SFXLabel" type="Label" parent="Panel/VBoxContainer/SFXContainer" unique_id=1952260565]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+text = "SFX"
+label_settings = SubResource("LabelSettings_item")
+
+[node name="SFXSlider" type="HSlider" parent="Panel/VBoxContainer/SFXContainer" unique_id=1592260362]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+value = 100.0
+
+[node name="SFXValue" type="Label" parent="Panel/VBoxContainer/SFXContainer" unique_id=1063305909]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "100%"
+label_settings = SubResource("LabelSettings_item")
+
+[node name="HSeparator2" type="HSeparator" parent="Panel/VBoxContainer" unique_id=1242852534]
+layout_mode = 2
+
+[node name="ResumeButton" type="Button" parent="Panel/VBoxContainer" unique_id=1049130507]
+custom_minimum_size = Vector2(350, 70)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "RESUME"
+
+[node name="QuitButton" type="Button" parent="Panel/VBoxContainer" unique_id=922172925]
+custom_minimum_size = Vector2(350, 70)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "QUIT TO MENU"

@@ -1,0 +1,37 @@
+# Godot engine generated files
+.godot/
+*.import
+
+# Compiled game exports (too large for GitHub, >100MB)
+*.exe
+*.console.exe
+_export/
+export_presets.cfg
+
+# Tools and AI agents
+_not_for_github/
+bin/
+agent-sprite-forge/
+skills-lock.json
+.agents/
+.claude/
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Aseprite source files (editor-only, use PNG exports instead)
+*.aseprite
+*.ase
+
+# Temporary files
+*.tmp
+*.bak
+*~

@@ -1,0 +1,115 @@
+[gd_scene format=3 uid="uid://settingsmenu"]
+
+[ext_resource type="Script" path="res://scripts/ui/settings_menu.gd" id="1_settings"]
+[ext_resource type="FontFile" uid="uid://b1mq84f8n0f4y" path="res://assets/fonts/PressStart2P-Regular.ttf" id="2_pixel_font"]
+[ext_resource type="Theme" uid="uid://pixeltheme" path="res://assets/themes/pixel_theme.tres" id="3_pixel_theme"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("2_pixel_font")
+font_size = 48
+outline_size = 4
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_item"]
+font = ExtResource("2_pixel_font")
+font_size = 20
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)
+
+[node name="SettingsMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_settings")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.1, 0.2, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -200.0
+offset_right = 200.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("3_pixel_theme")
+theme_override_constants/separation = 30
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "SETTINGS"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="BGMContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="BGMLabel" type="Label" parent="VBoxContainer/BGMContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "BGM Volume"
+label_settings = SubResource("LabelSettings_item")
+
+[node name="BGMSlider" type="HSlider" parent="VBoxContainer/BGMContainer"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+value = 70.0
+
+[node name="BGMValue" type="Label" parent="VBoxContainer/BGMContainer"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "70%"
+label_settings = SubResource("LabelSettings_item")
+
+[node name="SFXContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="SFXLabel" type="Label" parent="VBoxContainer/SFXContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "SFX Volume"
+label_settings = SubResource("LabelSettings_item")
+
+[node name="SFXSlider" type="HSlider" parent="VBoxContainer/SFXContainer"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+value = 100.0
+
+[node name="SFXValue" type="Label" parent="VBoxContainer/SFXContainer"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "100%"
+label_settings = SubResource("LabelSettings_item")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(250, 60)
+layout_mode = 2
+text = "BACK"

@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://dnm3kjxxva4al"]
+
+[ext_resource type="Script" uid="uid://cpquinpglpjlm" path="res://scripts/ui/death_screen.gd" id="1_ds"]
+[ext_resource type="Theme" uid="uid://pixeltheme" path="res://assets/themes/pixel_theme.tres" id="2_theme"]
+
+[node name="DeathScreen" type="Control" unique_id=471864944]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_ds")
