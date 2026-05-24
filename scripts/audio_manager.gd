@@ -87,18 +87,17 @@ func load_bgm(track_name: String) -> AudioStream:
 	var actual_filename = bgm_file_map.get(track_name, track_name)
 	var extensions = [".mp3", ".ogg", ".wav"]
 
-	for ext in extensions:
-		var path = "res://assets/audio/bgm/%s%s" % [actual_filename, ext]
-		if FileAccess.file_exists(path):
-			return _load_audio_file(path)
+	var paths_to_try: Array[String] = [
+		"res://assets/audio/bgm/%s" % actual_filename,
+		"res://assets/audio/bgm/%s" % actual_filename.to_lower(),
+		"res://assets/audio/bgm/%s" % track_name.replace("_", " ").capitalize(),
+	]
 
-		path = "res://assets/audio/bgm/%s%s" % [actual_filename.to_lower(), ext]
-		if FileAccess.file_exists(path):
-			return _load_audio_file(path)
-
-		path = "res://assets/audio/bgm/%s%s" % [track_name.replace("_", " ").capitalize(), ext]
-		if FileAccess.file_exists(path):
-			return _load_audio_file(path)
+	for base_path in paths_to_try:
+		for ext in extensions:
+			var path: String = base_path + ext
+			if ResourceLoader.exists(path):
+				return _load_audio_file(path)
 
 	push_warning("未找到BGM文件: %s" % track_name)
 	return null

@@ -1,21 +1,21 @@
 [gd_scene format=4 uid="uid://rfiaujjxto1d"]
 
 [ext_resource type="Script" uid="uid://bhj7nho4k67uw" path="res://scripts/levels/boss_battle.gd" id="0_boss_battle"]
-[ext_resource type="Texture2D" uid="uid://bxboknxvql5up" path="res://assets/parallax cave/1.png" id="1_1duqp"]
+[ext_resource type="Texture2D" uid="uid://dk5u1wsw6lehs" path="res://assets/parallax cave/1.png" id="1_1duqp"]
 [ext_resource type="PackedScene" uid="uid://bm48br0wpqs12" path="res://scenes/characters/hero.tscn" id="1_u00tm"]
-[ext_resource type="Texture2D" uid="uid://f45ri25pbncy" path="res://assets/parallax cave/2.png" id="2_1a722"]
-[ext_resource type="Texture2D" uid="uid://dty7aqpvkc20v" path="res://assets/16x16_ClassicTilePack/Trees/Trees.png" id="2_2or0o"]
+[ext_resource type="Texture2D" uid="uid://crus2rfe3c3xy" path="res://assets/parallax cave/2.png" id="2_1a722"]
+[ext_resource type="Texture2D" uid="uid://cxnrnbhcfw6ih" path="res://assets/16x16_ClassicTilePack/Trees/Trees.png" id="2_2or0o"]
 [ext_resource type="PackedScene" uid="uid://cyvyhs8sm7hmc" path="res://scenes/characters/knight.tscn" id="2_6qecx"]
-[ext_resource type="Texture2D" uid="uid://cg2ic08iucuqq" path="res://assets/Legacy-Fantasy - High Forest 2.3/Assets/Tiles.png" id="3_3nc1f"]
+[ext_resource type="Texture2D" uid="uid://4o0ks3pevxpo" path="res://assets/Legacy-Fantasy - High Forest 2.3/Assets/Tiles.png" id="3_3nc1f"]
 [ext_resource type="PackedScene" uid="uid://cxs5j2tcd0yxp" path="res://scenes/boss_health_bar.tscn" id="3_boss_hp"]
-[ext_resource type="Texture2D" uid="uid://dfgiu4q8wh1ho" path="res://assets/parallax cave/3fx.png" id="3_daxsf"]
-[ext_resource type="Texture2D" uid="uid://dmd7hi5cvo7y5" path="res://assets/parallax cave/4.png" id="4_ofxa5"]
+[ext_resource type="Texture2D" uid="uid://b8cqugiw6oarb" path="res://assets/parallax cave/3fx.png" id="3_daxsf"]
+[ext_resource type="Texture2D" uid="uid://bm8i2p5uvnpce" path="res://assets/parallax cave/4.png" id="4_ofxa5"]
 [ext_resource type="PackedScene" uid="uid://b1dd1wq2wdm1h" path="res://scenes/ui/Player Life.tscn" id="4_player_life"]
-[ext_resource type="Texture2D" uid="uid://coqo3xg8yvouw" path="res://assets/parallax cave/5.png" id="5_p3rx4"]
-[ext_resource type="Texture2D" uid="uid://wo1f7duoygrv" path="res://assets/parallax cave/6fx.png" id="6_pj4v6"]
-[ext_resource type="Texture2D" uid="uid://cur5hkkt24tdq" path="res://assets/parallax cave/7.png" id="7_sfkvt"]
-[ext_resource type="Texture2D" uid="uid://h4iu7ypopvvd" path="res://assets/parallax cave/8fx.png" id="8_tll26"]
-[ext_resource type="Texture2D" uid="uid://jbgvpfhvoqec" path="res://assets/parallax cave/9.png" id="9_l3he1"]
+[ext_resource type="Texture2D" uid="uid://1q6bxg7at82e" path="res://assets/parallax cave/5.png" id="5_p3rx4"]
+[ext_resource type="Texture2D" uid="uid://c0a6dtnw1hwoj" path="res://assets/parallax cave/6fx.png" id="6_pj4v6"]
+[ext_resource type="Texture2D" uid="uid://cae0q6ubgyov6" path="res://assets/parallax cave/7.png" id="7_sfkvt"]
+[ext_resource type="Texture2D" uid="uid://bkq0bwfe6mx6c" path="res://assets/parallax cave/8fx.png" id="8_tll26"]
+[ext_resource type="Texture2D" uid="uid://x7owrkgcfoul" path="res://assets/parallax cave/9.png" id="9_l3he1"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_3nc1f"]
 texture = ExtResource("3_3nc1f")
@@ -1134,7 +1134,9 @@ anchor_left = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.0
 offset_left = -484.0
+offset_top = 0.0
 offset_right = -84.0
+offset_bottom = 40.0
 grow_vertical = 1
 
 [node name="boundary" type="StaticBody2D" parent="." unique_id=1043806121]

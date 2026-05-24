@@ -1,6 +1,6 @@
 [gd_resource type="Theme" format=3 uid="uid://pixeltheme"]
 
-[ext_resource type="FontFile" uid="uid://b1mq84f8n0f4y" path="res://assets/fonts/PressStart2P-Regular.ttf" id="1_pixel_font"]
+[ext_resource type="FontFile" uid="uid://d0acmekhuddu7" path="res://assets/fonts/PressStart2P-Regular.ttf" id="1_pixel_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hover"]
 bg_color = Color(0.3, 0.5, 0.8, 1)
