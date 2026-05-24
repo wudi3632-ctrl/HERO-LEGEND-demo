@@ -16,7 +16,7 @@
 
 ---
 
-<img src="main_menu.png" width="80%" alt="主菜单 Main Menu">
+<img src="img/main_menu.png" width="80%" alt="主菜单 Main Menu">
 
 *主菜单 Main Menu*
 
@@ -49,13 +49,13 @@ This is a game project built **while learning**. As a beginner in Godot engine a
 ## 📸 游戏截图
 
 <div align="center">
-<img src="level_01.png" width="80%" alt="关卡1 - 奇幻森林冒险">
+<img src="img/level_01.png" width="80%" alt="关卡1 - 奇幻森林冒险">
 
 *关卡 1 — 奇幻森林冒险*
 
 <br><br>
 
-<img src="boss_battle.png" width="80%" alt="Boss战">
+<img src="img/boss_battle.png" width="80%" alt="Boss战">
 
 *Boss 战 — 骑士双阶段决战*
 
@@ -64,13 +64,13 @@ This is a game project built **while learning**. As a beginner in Godot engine a
 <details><summary><b>🌍 English</b></summary>
 
 <div align="center">
-<img src="level_01.png" width="80%" alt="Level 1">
+<img src="img/level_01.png" width="80%" alt="Level 1">
 
 *Level 1 — Fantasy Forest Adventure*
 
 <br><br>
 
-<img src="boss_battle.png" width="80%" alt="Boss Battle">
+<img src="img/boss_battle.png" width="80%" alt="Boss Battle">
 
 *Boss Battle — Two-Phase Knight Duel*
 
