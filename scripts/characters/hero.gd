@@ -37,6 +37,7 @@ var attack_target_enemy: CharacterBody2D = null
 var invincible_timer: float = 0.0
 const INVINCIBLE_DURATION: float = 0.6
 var is_dead: bool = false
+var death_signal_emitted: bool = false
 
 # ============================================================
 # 血量管理
@@ -412,6 +413,14 @@ func take_hurt(knockback_dir: int, knockback_force: float = 150.0) -> void:
 
 	transition_to("HurtState")
 
+## Reuse HurtState for shield recoil without reducing health.
+func apply_guard_recoil(knockback_dir: int, knockback_force: float = 180.0) -> void:
+	if is_dead or is_hurt:
+		return
+	invincible_timer = 0.25
+	hurt_knockback = Vector2(knockback_dir * knockback_force, -55.0)
+	transition_to("HurtState")
+
 
 # ============================================================
 # 生命周期
@@ -442,7 +451,9 @@ func _process(delta: float) -> void:
 	if is_dead and not is_hurt:
 		if animated_sprite_2d.animation == "die" and not animated_sprite_2d.is_playing():
 			visible = false
-			player_died.emit()
+			if not death_signal_emitted:
+				death_signal_emitted = true
+				player_died.emit()
 		return
 	if not is_dead or is_hurt:
 		current_state.update(delta)

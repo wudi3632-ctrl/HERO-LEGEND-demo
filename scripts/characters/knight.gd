@@ -16,7 +16,7 @@ var boss_health_bar: Control = null
 # Boss Phase System
 # ============================================================
 var boss_phase: int = 1  # 1 = Phase 1, 2 = Phase 2 (HP ≤ 50%)
-var phase_2_speed_multiplier: float = 1.3  # Phase 2 is 30% faster
+var phase_2_speed_multiplier: float = 1.45
 var is_rolling: bool = false
 var is_blocking: bool = false
 var is_transitioning: bool = false  # 二阶段转换期间无敌
@@ -24,6 +24,40 @@ var roll_cooldown: float = 0.0
 var block_cooldown: float = 0.0
 var combo_count: int = 0  # Track combo in Phase 2
 var boss_bgm_played: bool = false  # 标记是否已播放boss BGM（移到Knight类中，避免重复初始化）
+
+# Optional Jev tactical decision layer. For local development, launch Godot
+# from a terminal with TYPESAFE_API_KEY set. Never ship a key in the game.
+@export var jev_enabled: bool = true
+@export var jev_decision_interval: float = 0.75
+@export var jev_request_timeout: float = 1.8
+@export var jev_debug_logging: bool = true
+@export var local_reflex_enabled: bool = true
+
+const JEV_API_URL := "https://api.typesafe.ai/v1/systemone"
+const JEV_MODEL := "jev-latest"
+
+var jev_http: HTTPRequest
+var jev_api_key: String = ""
+var jev_request_in_flight: bool = false
+var jev_decision_cooldown: float = 0.0
+var jev_fallback_timer: float = 0.0
+var jev_pending_action: String = ""
+var jev_last_confidence: float = 0.0
+var jev_last_latency_ms: int = 0
+var jev_request_started_ms: int = 0
+var jev_recent_actions: Array[String] = []
+var jev_debug_label: Label
+var boss_last_tactical_action: String = "patrol"
+var jev_last_event_signature: String = ""
+var jev_action_received_ms: int = 0
+const JEV_ACTION_TTL_MS := 900
+var queued_attack_style: String = "fast"
+var consecutive_hits: int = 0
+var consecutive_hit_timer: float = 0.0
+var super_armor_timer: float = 0.0
+const HIT_CHAIN_WINDOW := 1.4
+const SUPER_ARMOR_DURATION := 1.1
+const SUPER_ARMOR_HITS := 3
 
 # ============================================================
 # KnightPatrolState - Combat-ready idle
@@ -175,6 +209,22 @@ class KnightChaseState extends State:
 			enemy.no_attack_sprite.play(current_anim)
 
 	func _make_decision(dist: float) -> void:
+		var player_attacking := _is_player_attacking()
+		if enemy.local_reflex_enabled and player_attacking and _apply_local_reflex(dist):
+			return
+
+		# Consume an asynchronous Jev choice first. While waiting, or whenever
+		# Jev is unavailable, the proven local AI below remains the fallback.
+		var jev_action: String = enemy.consume_jev_action()
+		if not jev_action.is_empty() and _apply_jev_action(jev_action, dist):
+			return
+
+		enemy.request_jev_decision(dist, player_attacking)
+		# In normal online operation Jev is the sole tactical state selector.
+		# Local rules below are used only during an explicit API failure window.
+		if enemy.is_jev_in_control():
+			return
+
 		# 二阶段特有：中等距离跳跃攻击
 		# 当距离在中等范围时，优先跳跃攻击（仅二阶段）
 		if enemy.boss_phase == 2:
@@ -204,6 +254,41 @@ class KnightChaseState extends State:
 					if randf() < 0.8:  # 80% chance to block
 						enemy.transition_to("KnightBlockState")
 						return
+
+	func _apply_jev_action(action: String, dist: float) -> bool:
+		match action:
+			"fast_attack", "heavy_attack", "attack":
+				if dist < enemy.ATTACK_RANGE and enemy.attack_cooldown_timer <= 0.0:
+					enemy.queued_attack_style = "heavy" if action == "heavy_attack" else "fast"
+					enemy.velocity.x = 0.0
+					enemy.transition_to("KnightAttackState")
+					return true
+			"jump_attack":
+				if enemy.boss_phase == 2 and enemy.attack_cooldown_timer <= 0.0:
+					enemy.transition_to("KnightJumpState")
+					return true
+			"roll":
+				if enemy.boss_phase == 1 and enemy.roll_cooldown <= 0.0:
+					enemy.transition_to("KnightRollState")
+					return true
+			"block":
+				if enemy.boss_phase == 2 and enemy.block_cooldown <= 0.0:
+					enemy.transition_to("KnightBlockState")
+					return true
+			"pressure":
+				return true # ChaseState already performs pressure movement.
+		return false
+
+	func _apply_local_reflex(dist: float) -> bool:
+		if dist > enemy.ATTACK_RANGE * 1.45:
+			return false
+		if enemy.boss_phase == 1 and enemy.roll_cooldown <= 0.0:
+			enemy.transition_to("KnightRollState")
+			return true
+		if enemy.boss_phase == 2 and enemy.block_cooldown <= 0.0:
+			enemy.transition_to("KnightBlockState")
+			return true
+		return false
 
 	func _is_player_attacking() -> bool:
 		# Check if player is attacking (has is_attacking property)
@@ -255,19 +340,10 @@ class KnightAttackState extends State:
 		sound_played_frame_2 = false
 		sound_played_frame_5 = false
 
-		# Determine attack based on phase and combo
-		if enemy.boss_phase == 1:
-			# Phase 1: Only attack_1
-			current_attack = 1
-			enemy.combo_count = 0
-		else:
-			# Phase 2: Combo attack_1 -> attack_2
-			enemy.combo_count += 1
-			if enemy.combo_count == 1:
-				current_attack = 1
-			else:
-				current_attack = 2
-				enemy.combo_count = 0  # Reset for next combo
+		# Reuse existing attack animations for fast and delayed timing profiles.
+		current_attack = 2 if enemy.queued_attack_style == "heavy" else 1
+		enemy.attack_sprite.speed_scale = 0.72 if current_attack == 2 else 1.28
+		enemy.boss_last_tactical_action = "heavy_attack" if current_attack == 2 else "fast_attack"
 
 		# Play appropriate animation
 		var anim_name = "attack_1" if current_attack == 1 else "attack_2"
@@ -329,6 +405,7 @@ class KnightAttackState extends State:
 		enemy.move_and_slide()
 
 	func exit() -> void:
+		enemy.attack_sprite.speed_scale = 1.0
 		if enemy.attack_sprite.animation_finished.is_connected(_on_attack_finished):
 			enemy.attack_sprite.animation_finished.disconnect(_on_attack_finished)
 
@@ -336,16 +413,9 @@ class KnightAttackState extends State:
 		if not is_instance_valid(enemy):
 			return
 
-		# Phase 2: Combo follow-up (attack_1 -> attack_2)
-		if enemy.boss_phase == 2 and current_attack == 1:
-			# 80% chance to follow up with attack_2
-			if randf() < 0.8:
-				enemy.transition_to("KnightAttackState")
-				return
-			else:
-				enemy.combo_count = 0  # Reset combo
-
-		# End attack sequence
+		# End the atomic attack. A follow-up combo is a new tactical choice,
+		# so Jev (or the explicit offline fallback) decides it from ChaseState.
+		enemy.combo_count = 0
 		enemy.attack_cooldown_timer = enemy.ATTACK_COOLDOWN
 		enemy.transition_to("KnightChaseState")
 
@@ -424,7 +494,7 @@ class KnightRollState extends State:
 
 	func exit() -> void:
 		enemy.is_rolling = false
-		enemy.roll_cooldown = 2.0  # 2 seconds cooldown
+		enemy.roll_cooldown = 1.25
 		# 恢复碰撞检测
 		enemy.collision_layer = 3  # 敌人层
 		enemy.collision_mask = 1   # 地面
@@ -435,7 +505,7 @@ class KnightRollState extends State:
 # ============================================================
 class KnightBlockState extends State:
 	var block_timer: float = 0.0
-	var max_block_duration: float = 5.0  # 格挡持续5秒
+	var max_block_duration: float = 3.5
 	var knockback_velocity: Vector2 = Vector2.ZERO
 	var is_being_knocked_back: bool = false
 	var animation_started: bool = false
@@ -597,7 +667,7 @@ class KnightBlockState extends State:
 
 	func exit() -> void:
 		enemy.is_blocking = false
-		enemy.block_cooldown = 2.0  # 2 seconds cooldown
+		enemy.block_cooldown = 1.25
 
 
 # ============================================================
@@ -917,9 +987,9 @@ func _ready() -> void:
 	MAX_HP = 30
 	DETECT_RANGE = 160.0
 	PATROL_SPEED = 20.0
-	CHASE_SPEED = 60.0
+	CHASE_SPEED = 68.0
 	ATTACK_RANGE = 32.0
-	ATTACK_COOLDOWN = 1.0
+	ATTACK_COOLDOWN = 0.42
 	KNOCKBACK_FORCE = 100.0
 	HURT_DURATION = 0.35
 
@@ -933,11 +1003,24 @@ func _ready() -> void:
 	# Override sprite references AFTER parent ready
 	animated_sprite_2d = no_attack_sprite
 
+	_setup_jev()
+	_setup_jev_debug_hud()
+
 	# Start in patrol state
 	current_state = KnightPatrolState.new(self)
 	current_state.enter()
 
 func transition_to(target_state_name: String) -> void:
+	var tactical_names := {
+		"KnightPatrolState": "patrol", "PatrolState": "patrol",
+		"KnightChaseState": "pressure", "ChaseState": "pressure",
+		"KnightAttackState": "attack", "AttackState": "attack",
+		"KnightBlockState": "block", "BlockState": "block",
+		"KnightRollState": "roll", "RollState": "roll",
+		"KnightJumpState": "jump_attack", "JumpState": "jump_attack"
+	}
+	if tactical_names.has(target_state_name):
+		boss_last_tactical_action = tactical_names[target_state_name]
 	if current_state:
 		current_state.exit()
 
@@ -969,6 +1052,17 @@ func _process(delta: float) -> void:
 		roll_cooldown -= delta
 	if block_cooldown > 0.0:
 		block_cooldown -= delta
+	if jev_decision_cooldown > 0.0:
+		jev_decision_cooldown -= delta
+	if jev_fallback_timer > 0.0:
+		jev_fallback_timer -= delta
+	if consecutive_hit_timer > 0.0:
+		consecutive_hit_timer -= delta
+		if consecutive_hit_timer <= 0.0:
+			consecutive_hits = 0
+	if super_armor_timer > 0.0:
+		super_armor_timer -= delta
+	_update_jev_debug_hud()
 
 	# Check phase transition - 在任何状态下都可能触发（通过HurtState已经处理）
 	# 这里只处理非受伤状态下的转换
@@ -988,6 +1082,173 @@ func _process(delta: float) -> void:
 
 	# Call parent process
 	super._process(delta)
+
+func _setup_jev() -> void:
+	if not jev_enabled:
+		return
+	# A browser bundle is public, so never embed or load a private API key in it.
+	# The Web build keeps the same combat mechanics and uses the local fallback AI
+	# until a server-side Jev proxy URL is configured.
+	if OS.has_feature("web"):
+		jev_enabled = false
+		print("Jev direct access disabled in Web build to protect the API key; using local boss AI.")
+		return
+	if OS.get_environment("JEV_FORCE_LOCAL") == "1":
+		jev_enabled = false
+		print("Jev forced off for baseline test; using local boss AI.")
+		return
+	jev_api_key = OS.get_environment("TYPESAFE_API_KEY").strip_edges()
+	if jev_api_key.is_empty():
+		var local_config := ConfigFile.new()
+		if local_config.load("res://jev.local.cfg") == OK:
+			jev_api_key = str(local_config.get_value("jev", "api_key", "")).strip_edges()
+	if jev_api_key.is_empty():
+		jev_enabled = false
+		print("Jev disabled: add a key to jev.local.cfg or set TYPESAFE_API_KEY; using local boss AI.")
+		return
+	jev_http = HTTPRequest.new()
+	jev_http.timeout = jev_request_timeout
+	add_child(jev_http)
+	jev_http.request_completed.connect(_on_jev_request_completed)
+	print("Jev boss decisions enabled.")
+
+func request_jev_decision(distance: float, player_attacking: bool) -> void:
+	if not jev_enabled or jev_request_in_flight:
+		return
+	if is_dead or is_transitioning or not player:
+		return
+	var distance_band := "far"
+	if distance < ATTACK_RANGE:
+		distance_band = "melee"
+	elif distance < ATTACK_RANGE * 2.0:
+		distance_band = "close"
+	elif distance < DETECT_RANGE * 0.8:
+		distance_band = "mid"
+	var event_signature := "%d|%s|%s|%s|%s" % [
+		boss_phase, distance_band, player_attacking,
+		attack_cooldown_timer <= 0.0,
+		(block_cooldown <= 0.0 if boss_phase == 2 else roll_cooldown <= 0.0)
+	]
+	if event_signature != jev_last_event_signature:
+		jev_last_event_signature = event_signature
+		jev_decision_cooldown = 0.0
+	if jev_decision_cooldown > 0.0:
+		return
+
+	var criteria := {
+		"pressure": "Close space aggressively, deny recovery, and force the player toward a mistake"
+	}
+	if distance < ATTACK_RANGE and attack_cooldown_timer <= 0.0:
+		criteria["fast_attack"] = "Use attack_1 as a quick interrupt with very short startup"
+		criteria["heavy_attack"] = "Use the slower attack_2 with deceptive timing and two hit frames"
+	if boss_phase == 2 and distance > ATTACK_RANGE * 1.5 and distance < DETECT_RANGE * 0.8 and attack_cooldown_timer <= 0.0:
+		criteria["jump_attack"] = "Leap in to catch retreat, landing, or predictable movement"
+	if boss_phase == 1 and roll_cooldown <= 0.0 and distance < ATTACK_RANGE * 2.0:
+		criteria["roll"] = "Evade the imminent attack and reposition for a counterattack"
+	if boss_phase == 2 and block_cooldown <= 0.0 and distance < ATTACK_RANGE * 2.0:
+		criteria["block"] = "Block the imminent attack and retain close-range advantage"
+
+	if criteria.size() <= 1:
+		jev_decision_cooldown = 0.25
+		return
+
+	var player_hp: int = int(player.get("current_health"))
+	var player_max_hp: int = maxi(1, int(player.get("max_health")))
+	var state := {
+		"phase": boss_phase,
+		"boss_hp": snappedf(float(hp) / float(MAX_HP), 0.05),
+		"player_hp": snappedf(float(player_hp) / float(player_max_hp), 0.05),
+		"range": distance_band,
+		"player_attacking": player_attacking,
+		"recent": jev_recent_actions.slice(maxi(0, jev_recent_actions.size() - 3))
+	}
+	var payload := {
+		"model": JEV_MODEL,
+		"state": JSON.stringify(state),
+		"questions": {
+			"next_tactic": {
+				"type": "choice",
+				"instructions": "Act as an expert, aggressive action-game boss. Choose the legal move that maximizes pressure and punishes the player's current commitment. Prefer attacks over waiting when a punish is available, counter active attacks, catch retreats with jump attacks, and vary recent actions while remaining fair.",
+				"criteria": criteria
+			}
+		}
+	}
+	var headers := PackedStringArray([
+		"Authorization: Bearer " + jev_api_key,
+		"Content-Type: application/json"
+	])
+	var error := jev_http.request(JEV_API_URL, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	if error == OK:
+		jev_request_in_flight = true
+		jev_request_started_ms = Time.get_ticks_msec()
+		jev_decision_cooldown = jev_decision_interval
+	else:
+		jev_fallback_timer = 2.5
+		if jev_debug_logging:
+			print("Jev request could not start (", error, "); using local boss AI.")
+
+func is_jev_in_control() -> bool:
+	return jev_enabled and jev_fallback_timer <= 0.0
+
+func consume_jev_action() -> String:
+	if jev_action_received_ms > 0 and Time.get_ticks_msec() - jev_action_received_ms > JEV_ACTION_TTL_MS:
+		jev_pending_action = ""
+	var action := jev_pending_action
+	jev_pending_action = ""
+	return action
+
+func _on_jev_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	jev_request_in_flight = false
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		jev_fallback_timer = 2.5
+		if jev_debug_logging:
+			print("Jev unavailable (result=", result, ", HTTP=", response_code, "); using local boss AI.")
+		return
+
+	var parsed = JSON.parse_string(body.get_string_from_utf8())
+	if not parsed is Dictionary:
+		return
+	var answers = parsed.get("answers", {})
+	var decision = answers.get("next_tactic", {})
+	var action: String = str(decision.get("choice", ""))
+	if action not in ["pressure", "fast_attack", "heavy_attack", "attack", "jump_attack", "roll", "block"]:
+		jev_fallback_timer = 2.5
+		return
+	jev_pending_action = action
+	jev_action_received_ms = Time.get_ticks_msec()
+	jev_fallback_timer = 0.0
+	jev_last_confidence = float(decision.get("confidence", 0.0))
+	jev_last_latency_ms = Time.get_ticks_msec() - jev_request_started_ms
+	jev_recent_actions.push_back(action)
+	if jev_recent_actions.size() > 5:
+		jev_recent_actions.pop_front()
+	if jev_debug_logging:
+		print("Jev chose ", action, " (confidence ", jev_last_confidence, ", latency ", jev_last_latency_ms, " ms)")
+
+func _setup_jev_debug_hud() -> void:
+	if not jev_debug_logging:
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 20
+	add_child(layer)
+	jev_debug_label = Label.new()
+	jev_debug_label.position = Vector2(12, 12)
+	jev_debug_label.add_theme_font_size_override("font_size", 16)
+	jev_debug_label.add_theme_color_override("font_color", Color.WHITE)
+	jev_debug_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	jev_debug_label.add_theme_constant_override("shadow_offset_x", 2)
+	jev_debug_label.add_theme_constant_override("shadow_offset_y", 2)
+	layer.add_child(jev_debug_label)
+
+func _update_jev_debug_hud() -> void:
+	if not jev_debug_label:
+		return
+	var mode := "LOCAL BASELINE"
+	if jev_enabled:
+		mode = "FALLBACK" if jev_fallback_timer > 0.0 else "JEV"
+	var action: String = boss_last_tactical_action
+	var armor := "  ARMOR" if super_armor_timer > 0.0 else ""
+	jev_debug_label.text = "BOSS AI: %s%s\nACTION: %s\nCONF: %.2f  LATENCY: %dms" % [mode, armor, action, jev_last_confidence, jev_last_latency_ms]
 
 # Override take_damage to handle blocking and rolling invincibility
 func take_damage(knockback_dir: int) -> void:
@@ -1024,6 +1285,26 @@ func take_damage(knockback_dir: int) -> void:
 		# 通知KnightBlockState开始处理击退
 		if current_state and current_state is KnightBlockState:
 			current_state._on_blocked_attack()
+		if player and player.has_method("apply_guard_recoil"):
+			var away_dir := 1 if player.global_position.x > global_position.x else -1
+			player.apply_guard_recoil(away_dir, KNOCKBACK_FORCE * 1.8)
+		return
+
+	# Three rapid hits trigger poise: damage still applies, but the boss stops
+	# being stun-locked and counters using an existing attack animation.
+	consecutive_hits += 1
+	consecutive_hit_timer = HIT_CHAIN_WINDOW
+	if super_armor_timer > 0.0 or consecutive_hits >= SUPER_ARMOR_HITS:
+		hp -= 1
+		_update_boss_health_bar()
+		if hp <= 0:
+			transition_to("DeathState")
+			return
+		super_armor_timer = SUPER_ARMOR_DURATION
+		consecutive_hits = 0
+		queued_attack_style = "fast" if boss_phase == 1 else "heavy"
+		attack_cooldown_timer = 0.0
+		transition_to("KnightAttackState")
 		return
 
 	# Normal damage - call parent to reduce HP and enter hurt state

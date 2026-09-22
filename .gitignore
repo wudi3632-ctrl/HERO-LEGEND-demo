@@ -35,3 +35,6 @@ ehthumbs.db
 *.tmp
 *.bak
 *~
+
+# Local secrets (copy from jev.local.cfg.example; never commit)
+jev.local.cfg

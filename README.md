@@ -143,6 +143,23 @@ This is a game project built **while learning**. As a beginner in Godot engine a
 - 视差滚动洞穴背景
 - Boss 专属生命条 UI
 
+#### 可选：Jev 智能战术决策
+
+骑士 Boss 可使用 TypeSafe Jev 在运行时选择当前可用的战术（近战、跳劈、翻滚、格挡或持续施压）。启用并连通 Jev 时，所有战术状态切换均由 Jev 决定；动画、碰撞、伤害、追击移动与动作合法性校验仍由本地状态机执行。未配置密钥、请求超时或网络失败时会在短暂窗口内自动使用原本的本地 AI。
+
+本地测试只需配置一次：复制 `jev.local.cfg.example` 为 `jev.local.cfg`，然后填写 Key：
+
+```ini
+[jev]
+api_key="你的新 Key"
+```
+
+`jev.local.cfg` 已被 `.gitignore` 排除，之后可直接从 Godot 编辑器运行。环境变量 `TYPESAFE_API_KEY` 仍然受支持，并且优先级更高，适合 CI 或临时覆盖。
+
+进入 Boss 战后，可在 Godot 输出中查看 `Jev chose ...`。`Knight` 节点的 Inspector 中可以关闭 `jev_enabled`，或调整决策间隔、超时和调试日志。
+
+> 安全提示：不要把 `jev.local.cfg` 强制提交，也不要把它打包进导出的游戏。当前直连方式只用于本地 Demo；正式发行时应把 Jev 请求放到你自己的后端，由游戏调用后端的受限接口。
+
 <details><summary><b>🌍 English</b></summary>
 
 - **Phase 1**: Patrol, chase, attack
