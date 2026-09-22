@@ -15,6 +15,7 @@ var _current_fade_tween: Tween = null
 var sfx_volume: float = 0.7
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_pool_size: int = 8
+var _web_audio_gate: CanvasLayer = null
 
 # UI 按钮音效
 var _ui_hover_sfx: AudioStream = preload("res://assets/audio/ui/switch14.ogg")
@@ -45,6 +46,52 @@ func _ready():
 		sfx_player.bus = "Master"
 		add_child(sfx_player)
 		_sfx_pool.append(sfx_player)
+	if OS.has_feature("web"):
+		call_deferred("_show_web_audio_gate")
+
+## Browsers block WebAudio until a real user gesture. Since the Web build opens
+## directly in combat, provide an explicit start button instead of silently
+## starting the fight with a suspended audio context.
+func _show_web_audio_gate() -> void:
+	get_tree().paused = true
+	var master_bus := AudioServer.get_bus_index("Master")
+	if master_bus >= 0:
+		AudioServer.set_bus_mute(master_bus, true)
+
+	_web_audio_gate = CanvasLayer.new()
+	_web_audio_gate.layer = 100
+	_web_audio_gate.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_web_audio_gate)
+
+	var shade := ColorRect.new()
+	shade.color = Color(0.02, 0.03, 0.05, 0.82)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_web_audio_gate.add_child(shade)
+
+	var start_button := Button.new()
+	start_button.text = "点击开始 / CLICK TO PLAY\nA/D 移动 · W 跳跃 · J 攻击 · Space 冲刺"
+	start_button.custom_minimum_size = Vector2(430, 86)
+	start_button.add_theme_font_size_override("font_size", 18)
+	start_button.set_anchors_preset(Control.PRESET_CENTER)
+	start_button.position = -start_button.custom_minimum_size * 0.5
+	start_button.pressed.connect(_unlock_web_audio)
+	_web_audio_gate.add_child(start_button)
+	start_button.grab_focus()
+
+func _unlock_web_audio() -> void:
+	var master_bus := AudioServer.get_bus_index("Master")
+	if master_bus >= 0:
+		AudioServer.set_bus_mute(master_bus, false)
+	# Restart the active track inside the click callback so Safari/Chrome resume
+	# their WebAudio context and the music begins from a known audible position.
+	if bgm_player.stream != null:
+		bgm_player.stop()
+		bgm_player.volume_db = linear_to_db(bgm_volume)
+		bgm_player.play()
+	get_tree().paused = false
+	if is_instance_valid(_web_audio_gate):
+		_web_audio_gate.queue_free()
+	_web_audio_gate = null
 
 # 播放 BGM
 func play_bgm(track_name: String, fade_duration: float = 1.0):

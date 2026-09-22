@@ -277,7 +277,7 @@ class AttackState1 extends State:
 		hero.velocity.x = move_toward(hero.velocity.x, 0.0, 400.0)
 		# Faster startup makes keyboard input feel immediate in a browser. The hit
 		# becomes active after one frame instead of waiting through two frames.
-		hero.animated_sprite_2d.speed_scale = 1.35
+		hero.animated_sprite_2d.speed_scale = 1.1
 		hero.animated_sprite_2d.play("attack-1")
 		if not hero.animated_sprite_2d.is_connected("animation_finished", _on_attack1_finished):
 			hero.animated_sprite_2d.animation_finished.connect(_on_attack1_finished)
@@ -300,7 +300,7 @@ class AttackState1 extends State:
 
 	func _on_attack1_finished() -> void:
 		if hero.current_state is AttackState1:
-			if hero.attack_buffered or Input.is_action_pressed("attack-1"):
+			if hero.attack_buffered:
 				hero.transition_to("AttackState1")
 				return
 			var dir := Input.get_axis("move_left", "move_right")
