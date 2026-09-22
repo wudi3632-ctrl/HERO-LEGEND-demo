@@ -21,6 +21,7 @@ var GRAVITY: float = ProjectSettings.get("physics/2d/default_gravity")
 @export var ACCELERATION: float = 600.0
 @export var DECELERATION: float = 800.0
 @export var ATTACK_DAMAGE_KNOCKBACK: float = 200.0
+@export var ATTACK_RECOVERY: float = 0.12
 
 # ============================================================
 # 运行时变量
@@ -38,7 +39,7 @@ var invincible_timer: float = 0.0
 const INVINCIBLE_DURATION: float = 0.6
 var is_dead: bool = false
 var death_signal_emitted: bool = false
-var attack_buffered: bool = false
+var attack_recovery_timer: float = 0.0
 
 # ============================================================
 # 血量管理
@@ -89,7 +90,7 @@ class IdleState extends State:
 			hero.transition_to("JumpState")
 		if Input.is_action_just_pressed("flash") and hero.dash_cooldown_timer <= 0.0:
 			hero.transition_to("DashState")
-		if Input.is_action_just_pressed("attack-1"):
+		if Input.is_action_just_pressed("attack-1") and hero.attack_recovery_timer <= 0.0:
 			hero.transition_to("AttackState1")
 		var direction := Input.get_axis("move_left", "move_right")
 		if not is_zero_approx(direction):
@@ -123,7 +124,7 @@ class MoveState extends State:
 		if Input.is_action_just_pressed("flash") and hero.dash_cooldown_timer <= 0.0:
 			hero.transition_to("DashState")
 			return
-		if Input.is_action_just_pressed("attack-1"):
+		if Input.is_action_just_pressed("attack-1") and hero.attack_recovery_timer <= 0.0:
 			hero.transition_to("AttackState1")
 			return
 		hero.animated_sprite_2d.play("move")
@@ -159,7 +160,7 @@ class JumpState extends State:
 			hero.animated_sprite_2d.flip_h = direction < 0
 		if Input.is_action_just_pressed("flash") and hero.dash_cooldown_timer <= 0.0:
 			hero.transition_to("DashState")
-		if Input.is_action_just_pressed("attack-1"):
+		if Input.is_action_just_pressed("attack-1") and hero.attack_recovery_timer <= 0.0:
 			hero.transition_to("AttackState1")
 
 	func physics_update(delta: float) -> void:
@@ -193,7 +194,7 @@ class FallState extends State:
 			hero.animated_sprite_2d.flip_h = direction < 0
 		if Input.is_action_just_pressed("flash") and hero.dash_cooldown_timer <= 0.0:
 			hero.transition_to("DashState")
-		if Input.is_action_just_pressed("attack-1"):
+		if Input.is_action_just_pressed("attack-1") and hero.attack_recovery_timer <= 0.0:
 			hero.transition_to("AttackState1")
 
 	func physics_update(delta: float) -> void:
@@ -272,7 +273,6 @@ class HurtState extends State:
 class AttackState1 extends State:
 	func enter() -> void:
 		hero.is_attacking = true
-		hero.attack_buffered = false
 		hero.has_dealt_attack_damage = false
 		hero.velocity.x = move_toward(hero.velocity.x, 0.0, 400.0)
 		# Faster startup makes keyboard input feel immediate in a browser. The hit
@@ -284,12 +284,11 @@ class AttackState1 extends State:
 
 	func exit() -> void:
 		hero.animated_sprite_2d.speed_scale = 1.0
+		hero.attack_recovery_timer = hero.ATTACK_RECOVERY
 		if hero.animated_sprite_2d.is_connected("animation_finished", _on_attack1_finished):
 			hero.animated_sprite_2d.animation_finished.disconnect(_on_attack1_finished)
 
 	func update(_delta: float) -> void:
-		if Input.is_action_just_pressed("attack-1") and hero.animated_sprite_2d.frame >= 2:
-			hero.attack_buffered = true
 		if hero.animated_sprite_2d.frame >= 1:
 			hero._try_damage_nearby_enemies()
 
@@ -300,9 +299,6 @@ class AttackState1 extends State:
 
 	func _on_attack1_finished() -> void:
 		if hero.current_state is AttackState1:
-			if hero.attack_buffered:
-				hero.transition_to("AttackState1")
-				return
 			var dir := Input.get_axis("move_left", "move_right")
 			if hero.is_on_floor():
 				if is_zero_approx(dir):
@@ -448,6 +444,8 @@ func _ready() -> void:
 	current_state.enter()
 
 func _process(delta: float) -> void:
+	if attack_recovery_timer > 0.0:
+		attack_recovery_timer = maxf(0.0, attack_recovery_timer - delta)
 	if dash_cooldown_timer > 0.0 and current_state.get_script() != DashState:
 		dash_cooldown_timer -= delta
 	# 无敌帧倒计时 + 闪烁效果
