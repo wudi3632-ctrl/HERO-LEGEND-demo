@@ -38,6 +38,7 @@ var invincible_timer: float = 0.0
 const INVINCIBLE_DURATION: float = 0.6
 var is_dead: bool = false
 var death_signal_emitted: bool = false
+var attack_buffered: bool = false
 
 # ============================================================
 # 血量管理
@@ -271,18 +272,25 @@ class HurtState extends State:
 class AttackState1 extends State:
 	func enter() -> void:
 		hero.is_attacking = true
+		hero.attack_buffered = false
 		hero.has_dealt_attack_damage = false
 		hero.velocity.x = move_toward(hero.velocity.x, 0.0, 400.0)
+		# Faster startup makes keyboard input feel immediate in a browser. The hit
+		# becomes active after one frame instead of waiting through two frames.
+		hero.animated_sprite_2d.speed_scale = 1.35
 		hero.animated_sprite_2d.play("attack-1")
 		if not hero.animated_sprite_2d.is_connected("animation_finished", _on_attack1_finished):
 			hero.animated_sprite_2d.animation_finished.connect(_on_attack1_finished)
 
 	func exit() -> void:
+		hero.animated_sprite_2d.speed_scale = 1.0
 		if hero.animated_sprite_2d.is_connected("animation_finished", _on_attack1_finished):
 			hero.animated_sprite_2d.animation_finished.disconnect(_on_attack1_finished)
 
 	func update(_delta: float) -> void:
-		if hero.animated_sprite_2d.frame >= 2:
+		if Input.is_action_just_pressed("attack-1") and hero.animated_sprite_2d.frame >= 2:
+			hero.attack_buffered = true
+		if hero.animated_sprite_2d.frame >= 1:
 			hero._try_damage_nearby_enemies()
 
 	func physics_update(delta: float) -> void:
@@ -292,6 +300,9 @@ class AttackState1 extends State:
 
 	func _on_attack1_finished() -> void:
 		if hero.current_state is AttackState1:
+			if hero.attack_buffered or Input.is_action_pressed("attack-1"):
+				hero.transition_to("AttackState1")
+				return
 			var dir := Input.get_axis("move_left", "move_right")
 			if hero.is_on_floor():
 				if is_zero_approx(dir):
