@@ -34,6 +34,7 @@ var boss_bgm_played: bool = false  # 标记是否已播放boss BGM（移到Knigh
 @export var local_reflex_enabled: bool = true
 
 const JEV_API_URL := "https://api.typesafe.ai/v1/systemone"
+const JEV_WEB_PROXY_URL := "https://hero-jev-proxy.wudi3632.workers.dev/decision"
 const JEV_MODEL := "jev-latest"
 
 var jev_http: HTTPRequest
@@ -1086,12 +1087,14 @@ func _process(delta: float) -> void:
 func _setup_jev() -> void:
 	if not jev_enabled:
 		return
-	# A browser bundle is public, so never embed or load a private API key in it.
-	# The Web build keeps the same combat mechanics and uses the local fallback AI
-	# until a server-side Jev proxy URL is configured.
-	if OS.has_feature("web"):
-		jev_enabled = false
-		print("Jev direct access disabled in Web build to protect the API key; using local boss AI.")
+	# Browser builds call a restricted Worker proxy. The private key never ships
+	# inside the public game bundle.
+	if OS.get_name() == "Web" or OS.has_feature("web"):
+		jev_http = HTTPRequest.new()
+		jev_http.timeout = jev_request_timeout
+		add_child(jev_http)
+		jev_http.request_completed.connect(_on_jev_request_completed)
+		print("Jev boss decisions enabled through secure Web proxy.")
 		return
 	if OS.get_environment("JEV_FORCE_LOCAL") == "1":
 		jev_enabled = false
@@ -1173,11 +1176,22 @@ func request_jev_decision(distance: float, player_attacking: bool) -> void:
 			}
 		}
 	}
-	var headers := PackedStringArray([
-		"Authorization: Bearer " + jev_api_key,
-		"Content-Type: application/json"
-	])
-	var error := jev_http.request(JEV_API_URL, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	var request_url := JEV_API_URL
+	var headers := PackedStringArray(["Content-Type: application/json"])
+	if OS.get_name() == "Web" or OS.has_feature("web"):
+		request_url = JEV_WEB_PROXY_URL
+		payload = {
+			"phase": state.phase,
+			"boss_hp": state.boss_hp,
+			"player_hp": state.player_hp,
+			"range": state.range,
+			"player_attacking": state.player_attacking,
+			"recent": state.recent,
+			"legal_actions": criteria.keys()
+		}
+	else:
+		headers.insert(0, "Authorization: Bearer " + jev_api_key)
+	var error := jev_http.request(request_url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
 	if error == OK:
 		jev_request_in_flight = true
 		jev_request_started_ms = Time.get_ticks_msec()
@@ -1208,9 +1222,15 @@ func _on_jev_request_completed(result: int, response_code: int, _headers: Packed
 	var parsed = JSON.parse_string(body.get_string_from_utf8())
 	if not parsed is Dictionary:
 		return
-	var answers = parsed.get("answers", {})
-	var decision = answers.get("next_tactic", {})
-	var action: String = str(decision.get("choice", ""))
+	var decision: Dictionary
+	var action: String
+	if OS.get_name() == "Web" or OS.has_feature("web"):
+		decision = parsed
+		action = str(parsed.get("action", ""))
+	else:
+		var answers = parsed.get("answers", {})
+		decision = answers.get("next_tactic", {})
+		action = str(decision.get("choice", ""))
 	if action not in ["pressure", "fast_attack", "heavy_attack", "attack", "jump_attack", "roll", "block"]:
 		jev_fallback_timer = 2.5
 		return

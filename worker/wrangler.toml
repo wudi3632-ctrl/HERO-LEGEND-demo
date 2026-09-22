@@ -1,0 +1,7 @@
+name = "hero-jev-proxy"
+main = "src/index.js"
+compatibility_date = "2026-09-22"
+
+[vars]
+ALLOWED_ORIGIN = "https://wudi3632-ctrl.github.io"
+
