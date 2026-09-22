@@ -69,7 +69,7 @@ func _show_web_audio_gate() -> void:
 	_web_audio_gate.add_child(shade)
 
 	var start_button := Button.new()
-	start_button.text = "点击开始 / CLICK TO PLAY\nA/D 移动 · W 跳跃 · J 攻击 · Space 冲刺"
+	start_button.text = "CLICK TO PLAY\nA/D MOVE · W JUMP · J ATTACK · SPACE DASH"
 	start_button.custom_minimum_size = Vector2(430, 86)
 	start_button.add_theme_font_size_override("font_size", 18)
 	start_button.set_anchors_preset(Control.PRESET_CENTER)
