@@ -46,7 +46,7 @@ func _ready():
 		sfx_player.bus = "Master"
 		add_child(sfx_player)
 		_sfx_pool.append(sfx_player)
-	if OS.has_feature("web"):
+	if OS.get_name() == "Web" or OS.has_feature("web"):
 		call_deferred("_show_web_audio_gate")
 
 ## Browsers block WebAudio until a real user gesture. Since the Web build opens
